@@ -1,0 +1,31 @@
+# Compiler and flags
+CC = gcc
+CFLAGS = -Wall -g -std=gnu99
+LDFLAGS = -lpthread -lm
+
+# Source and object files
+SRC = monitor-rw.c monitor-rw-nostarve.c monitor-gpu.c monitor-dining.c
+OBJ = $(SRC:.c=.o)
+
+# Target executables
+TARGETS = monitor-rw monitor-rw-nostarve monitor-gpu monitor-dining
+
+# Default target to build all programs
+all: $(TARGETS)
+
+# Build each target
+monitor-rw: monitor-rw.o
+	$(CC) $(CFLAGS) -o monitor-rw monitor-rw.o $(LDFLAGS)
+
+monitor-rw-nostarve: monitor-rw-nostarve.o
+	$(CC) $(CFLAGS) -o monitor-rw-nostarve monitor-rw-nostarve.o $(LDFLAGS)
+
+monitor-gpu: monitor-gpu.o
+	$(CC) $(CFLAGS) -o monitor-gpu monitor-gpu.o $(LDFLAGS)
+
+monitor-dining: monitor-dining.o
+	$(CC) $(CFLAGS) -o monitor-dining monitor-dining.o $(LDFLAGS)
+
+# Cleanup
+clean:
+	rm -f $(OBJ) $(TARGETS)

@@ -1,0 +1,330 @@
+first program --> monitor-rw.c
+In this program, we were introduced to the reader-writer problem. The objective was to allow multiple readers
+ to read simultaneously, as long as no writer is writing, and to ensure that a writer can write only when there are no 
+ active readers. I implemented a solution using a monitor with the following approach:
+
+Within the monitor, I created a lock to protect critical sections and two conditional variables to prevent race conditions involving the readcount variable.
+My current output is as follows:
+
+macbook-pro-210:homeworkD marialeal$ ./monitor-rw
+Thread 0x16f0b7000 wants to read
+Thread 0x16f143000 wants to write
+Thread 0x16f143000 writing value 36
+Thread 0x16f1cf000 wants to read
+Thread 0x16f25b000 wants to write
+Thread 0x16f2e7000 wants to write
+Thread 0x16f373000 wants to write
+Thread 0x16f3ff000 wants to write
+Thread 0x16f48b000 wants to read
+Thread 0x16f517000 wants to read
+Thread 0x16f5a3000 wants to read
+Thread 0x16f143000 done writing value
+Thread 0x16f143000 wants to read
+Thread 0x16f0b7000 reading (1 readers)
+Thread 0x16f1cf000 reading (2 readers)
+Thread 0x16f48b000 reading (3 readers)
+Thread 0x16f517000 reading (4 readers)
+Thread 0x16f5a3000 reading (5 readers)
+Thread 0x16f5a3000 done reading value 36
+Thread 0x16f5a3000 wants to read
+Thread 0x16f5a3000 reading (5 readers)
+Thread 0x16f517000 done reading value 36
+Thread 0x16f517000 wants to read
+Thread 0x16f517000 reading (5 readers)
+Thread 0x16f5a3000 done reading value 36
+Thread 0x16f5a3000 wants to read
+Thread 0x16f5a3000 reading (5 readers)
+Thread 0x16f1cf000 done reading value 36
+Thread 0x16f1cf000 wants to read
+Thread 0x16f1cf000 reading (5 readers)
+Thread 0x16f1cf000 done reading value 36
+Thread 0x16f1cf000 wants to write
+Thread 0x16f48b000 done reading value 36
+Thread 0x16f48b000 wants to write
+
+Here, we can see an alternating pattern of reads and writes, starting with a writing thread:
+Thread 0x16f143000 wants to write
+Thread 0x16f143000 writing value 36
+During this time, no other thread is allowed to read or write. Once this thread finishes writing, ...
+
+Thread 0x16f5a3000 wants to read
+Thread 0x16f143000 done writing value
+Thread 0x16f143000 wants to read
+Thread 0x16f0b7000 reading (1 readers)
+Thread 0x16f1cf000 reading (2 readers)
+Thread 0x16f48b000 reading (3 readers)
+Thread 0x16f517000 reading (4 readers)
+Thread 0x16f5a3000 reading (5 readers)
+
+We can see that the threads that were waiting to read have been signaled by the conditional variable and are now 
+allowed to read. At this stage, no writer is permitted to write until all reader threads have finished reading. 
+However, we observe that reader threads continue running for an extended period, leading to writer starvation, 
+as the waiting writer threads are unable to proceed.
+
+Thread 0x16f5a3000 reading (5 readers)
+Thread 0x16f5a3000 done reading value 36
+Thread 0x16f5a3000 wants to read
+Thread 0x16f5a3000 reading (5 readers)
+Thread 0x16f517000 done reading value 36
+Thread 0x16f517000 wants to read
+Thread 0x16f517000 reading (5 readers)
+Thread 0x16f5a3000 done reading value 36
+Thread 0x16f5a3000 wants to read
+Thread 0x16f5a3000 reading (5 readers)
+Thread 0x16f1cf000 done reading value 36
+Thread 0x16f1cf000 wants to read
+Thread 0x16f1cf000 reading (5 readers)
+Thread 0x16f1cf000 done reading value 36
+Thread 0x16f1cf000 wants to write
+Thread 0x16f48b000 done reading value 36
+Thread 0x16f48b000 wants to write
+Thread 0x16f0b7000 done reading value 36
+Thread 0x16f0b7000 wants to read
+Thread 0x16f0b7000 reading (3 readers)
+Thread 0x16f5a3000 done reading value 36
+Thread 0x16f5a3000 wants to read
+Thread 0x16f5a3000 reading (3 readers)
+
+- the reader keep reading and we allow no writer to go in. however we see this pattern keeps going for a rather 
+long time in the output code 
+
+Thread 0x16f5a3000 reading (3 readers)
+Thread 0x16f517000 done reading value 36
+Thread 0x16f517000 wants to read
+Thread 0x16f517000 reading (3 readers)
+Thread 0x16f517000 done reading value 36
+Thread 0x16f517000 wants to write
+Thread 0x16f5a3000 done reading value 36
+Thread 0x16f5a3000 wants to write
+Thread 0x16f0b7000 done reading value 36
+Thread 0x16f0b7000 wants to read
+Thread 0x16f25b000 writing value 4
+Thread 0x16f25b000 done writing value
+Thread 0x16f25b000 wants to read
+Thread 0x16f143000 reading (1 readers)
+Thread 0x16f0b7000 reading (2 readers)
+Thread 0x16f143000 done reading value 4
+Thread 0x16f143000 wants to read
+
+We don’t have a writer thread until this point, which then allows the next awakened writer thread to proceed. 
+By this time, all reader threads have finished reading.
+
+Thread 0x16f0b7000 done reading value 36
+Thread 0x16f0b7000 wants to read
+Thread 0x16f25b000 writing value 4
+-after we finihs wiritng the value 4, we see the readers get signeld again and the writer sonce again get staved:
+writing value 4
+Thread 0x16f25b000 done writing value
+Thread 0x16f25b000 wants to read
+Thread 0x16f143000 reading (1 readers)
+Thread 0x16f0b7000 reading (2 readers)
+Thread 0x16f143000 done reading value 4
+Thread 0x16f143000 wants to read
+Thread 0x16f143000 reading (2 readers)
+Thread 0x16f143000 done reading value 4
+Thread 0x16f143000 wants to read
+Thread 0x16f143000 reading (2 readers)
+Thread 0x16f0b7000 done reading value 4
+Thread 0x16f0b7000 wants to read
+Thread 0x16f0b7000 reading (2 readers)
+Thread 0x16f0b7000 done reading value 4
+Thread 0x16f0b7000 wants to write
+Thread 0x16f143000 done reading value 4
+Thread 0x16f143000 wants to write
+Thread 0x16f143000 writing value 41
+Thread 0x16f143000 done writing value
+
+This demonstrates how the reader-writer program operates, following the rules that allow either multiple readers 
+or a single writer at a time. However, this ultimately leads to writer starvation because the only condition for a 
+writer to proceed is when there are zero active readers. When a writer finishes, it signals all waiting reader threads, 
+but a writer thread is only signaled once—when we happen to reach zero readers. This results in prolonged writer starvation.
+
+
+second program --> monitor-rw-nonstarve.c
+
+In this program, the goal was to eliminate writer starvation. To achieve this, I introduced a writer_counter variable 
+to track the number of writers waiting and determine if a writer should be given priority.
+The solution ensures that readers can only start reading if there are no waiting writers or if a writer is already writing. 
+This prevents new readers from continuously delaying writers.
+Writers, on the other hand, are only allowed to write when there are no active readers and no other 
+writer is currently writing. This guarantees that writers do not get indefinitely delayed by incoming readers.
+
+macbook-pro-210:homeworkD marialeal$ ./monitor-rw-nostarve
+Thread 0x16b647000 wants to read
+Thread 0x16b647000 reading (1 readers)
+Thread 0x16b6d3000 wants to read
+Thread 0x16b903000 wants to write
+Thread 0x16b7eb000 wants to read
+Thread 0x16b75f000 wants to read
+Thread 0x16b877000 wants to read
+Thread 0x16b98f000 wants to write
+Thread 0x16ba1b000 wants to read
+Thread 0x16b6d3000 reading (2 readers)
+Thread 0x16bb33000 wants to read
+Thread 0x16baa7000 wants to write
+Thread 0x16b6d3000 done reading value 0
+Thread 0x16b6d3000 wants to read
+Thread 0x16b647000 done reading value 0
+Thread 0x16b647000 wants to read
+Thread 0x16b903000 writing value 57
+Thread 0x16b903000 done writing value
+Thread 0x16b903000 wants to read
+Thread 0x16b98f000 writing value 90
+Thread 0x16b98f000 done writing value
+Thread 0x16b98f000 wants to read
+Thread 0x16baa7000 writing value 64
+Thread 0x16baa7000 done writing value
+Thread 0x16baa7000 wants to read
+
+In this execution, we observe the usual scenario where both readers and writers are waiting.
+However, initially, two reader threads begin reading.
+Only after these two readers finish, the waiting writers are allowed to proceed. 
+Once the writers are signaled or woken up, all waiting writers get a chance to write their values, rather than 
+just a single writer at a time. After all waiting writers have completed their writing, we then allow new reader 
+threads to begin reading again. This approach ensures that writers are not starved while maintaining the integrity of 
+the reader-writer synchronization.
+
+Thread 0x16b647000 done reading value 6
+Thread 0x16b647000 wants to read
+Thread 0x16b877000 done reading value 6
+Thread 0x16b877000 wants to read
+Thread 0x16b903000 done reading value 6
+Thread 0x16b903000 wants to write
+Thread 0x16bb33000 done reading value 6
+Thread 0x16bb33000 wants to read
+Thread 0x16ba1b000 done reading value 6
+Thread 0x16ba1b000 wants to read
+Thread 0x16b75f000 done reading value 6
+Thread 0x16b7eb000 done reading value 6
+Thread 0x16b6d3000 done reading value 6
+Thread 0x16b6d3000 wants to read
+Thread 0x16b7eb000 wants to write
+Thread 0x16b75f000 wants to read
+Thread 0x16b98f000 done reading value 6
+Thread 0x16b98f000 wants to read
+Thread 0x16baa7000 writing value 15
+Thread 0x16baa7000 done writing value
+Thread 0x16baa7000 wants to read
+Thread 0x16b903000 writing value 7
+Thread 0x16b903000 done writing value
+Thread 0x16b903000 wants to read
+Thread 0x16b7eb000 writing value 81
+Thread 0x16b7eb000 done writing value
+Thread 0x16b7eb000 wants to write
+Thread 0x16b7eb000 writing value 54
+Thread 0x16b7eb000 done writing value
+Thread 0x16b7eb000 wants to read
+
+This chunk of code demonstrates how variation and balance are maintained in the reader-writer synchronization.
+When a group of readers arrives, they are allowed to read. However, 
+once these readers finish, the waiting writers are given the opportunity to write. 
+Unlike the previous approach, where only one writer would proceed at a time, this implementation ensures that 
+all waiting writers can complete their tasks before allowing new readers to begin reading again.
+
+
+third program --> monitor-gpu.c
+In this program, the task was to create a system that allows only four threads to use the GPU simultaneously, 
+ensuring that all four threads share the same dataset.
+If a thread does not have the same dataset as the others, it must go to sleep and wait until it is allowed to
+ run with a matching dataset.
+The current output demonstrates how this synchronization mechanism ensures that threads only execute when the 
+dataset conditions are met:
+
+macbook-pro-210:homeworkD marialeal$ ./monitor-gpu
+thread 6123171840 wants to use gpu with dataset 4
+thread 6124318720 wants to use gpu with dataset 8
+thread 6123171840 using gpu with dataset 4
+thread 6123745280 wants to use gpu with dataset 7
+thread 6124892160 wants to use gpu with dataset 1
+thread 6125465600 wants to use gpu with dataset 6
+thread 6126612480 wants to use gpu with dataset 8
+thread 6126039040 wants to use gpu with dataset 6
+thread 6127185920 wants to use gpu with dataset 6
+thread 6127759360 wants to use gpu with dataset 2
+thread 6128332800 wants to use gpu with dataset 3
+thread 6128906240 wants to use gpu with dataset 4
+thread 6128906240 using gpu with dataset 4
+thread 6129479680 wants to use gpu with dataset 8
+thread 6130053120 wants to use gpu with dataset 2
+thread 6130626560 wants to use gpu with dataset 4
+thread 6130626560 using gpu with dataset 4
+thread 6131200000 wants to use gpu with dataset 6
+thread 6131773440 wants to use gpu with dataset 7
+thread 6132346880 wants to use gpu with dataset 0
+thread 6132920320 wants to use gpu with dataset 2
+thread 6133493760 wants to use gpu with dataset 5
+thread 6134067200 wants to use gpu with dataset 6
+thread 6134640640 wants to use gpu with dataset 6
+thread 6135214080 wants to use gpu with dataset 7
+
+Here, we can see how the first two threads enter with datasets 4 and 8. However, only the first thread 
+will start using the GPU with its dataset because it was the first to arrive. Then, we see new threads enter, but 
+since they don’t have the same dataset, they are not allowed in. We only allow the next thread to enter once it arrives 
+with the same dataset number, which in this case would be 4, and so on.
+
+How do we ensure that we change the dataset? We use a global variable to track the current dataset, 
+and we also have a global variable to monitor the number of running threads. Once we detect that the number of 
+running threads is zero, we change the dataset to the next available thread’s dataset. This is because there are no 
+longer any running threads on the GPU, so we can allow a new dataset to be processed.
+
+thread 6171914240 done using gpu with dataset 4
+thread 6172487680 done using gpu with dataset 4
+thread 6144962560 done using gpu with dataset 4
+thread 6171914240 wants to use gpu with dataset 6
+thread 6145536000 using gpu with dataset 4
+thread 6172487680 wants to use gpu with dataset 0
+thread 6153564160 using gpu with dataset 4
+thread 6144962560 wants to use gpu with dataset 6
+thread 6148976640 using gpu with dataset 4
+thread 6167900160 done using gpu with dataset 4
+thread 6167900160 wants to use gpu with dataset 9
+
+fourth program --> monitor-dining.c
+In this program, we were tasked with solving the Dining Philosophers' Dilemma. 
+This one was pretty interesting, but Professor Thain gave us a great hint during class. 
+To break the Dining Philosophers' Dilemma, we need to break the cycle that occurs if we start from the 
+first philosopher and sequentially go to the last one. If we do this, it could lead to the last philosopher 
+creating a cycle because they will all be waiting for the right fork, which will eventually cause a deadlock.
+
+To reverse this, Professor Thain told us to break the cycle. In this case,
+when we get to the first philosopher, we have them grab the right fork first and then the left fork second (themselves).
+This will break the cycle (if we go sequentially) because the last philosopher will no 
+longer have to wait for the right fork. So, it’s important to ensure that we can prevent deadlock if this happens.
+
+my current output is: 
+macbook-pro-210:homeworkD marialeal$ ./monitor-dining
+thread 0 sleeping
+thread 2 sleeping
+thread 1 sleeping
+thread 3 sleeping
+thread 4 sleeping
+thread 0 hungry
+thread 0 eating
+thread 4 hungry
+thread 0 sleeping
+thread 4 eating
+thread 0 hungry
+thread 2 hungry
+thread 2 eating
+thread 1 hungry
+thread 3 hungry
+thread 4 sleeping
+thread 0 eating
+thread 2 sleeping
+thread 3 eating
+thread 4 hungry
+thread 0 sleeping
+thread 1 eating
+
+In this output, we can see that we start with our philosophers sleeping, but philosopher 0 gets hungry 
+and starts eating, which means it will block fork 2. Then, we let philosopher 4 eat because philosopher 0 is done 
+eating and goes to sleep. After that, we let philosopher 4 eat because fork 0 (which creates a circular motion) 
+is now available for philosopher 4. We can also let philosopher 2 eat because its forks are not blocked by philosopher 1, 
+and so on. Once philosopher 2 is done and sleeping, we allow philosopher 3 to eat.
+
+The implementation I did here was to assign every philosopher their left and right fork first. 
+However, if the current philosopher is the last one, they are assigned the right fork first and then the left fork, 
+which breaks any cycles and prevents deadlocks. We also had to track which forks were taken, which is how we update 
+the fork data structure. Whenever we allow a philosopher to eat because their forks are available, we mark these forks
+ as used by placing a -1 in the indices of those forks. Once the philosopher finishes eating, we access these forks again 
+ and change them back to 0 to signal that the forks are free and available for use.
